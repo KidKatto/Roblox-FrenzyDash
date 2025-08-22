@@ -1,0 +1,34 @@
+{
+  "name": "FrenzyDash-Mooncake",
+  "tree": {
+    "$className": "DataModel",
+
+      "ReplicatedStorage": {
+        "$className": "ReplicatedStorage",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/ReplicatedStorage"
+      }
+      ,
+      "ServerScriptService": {
+        "$className": "ServerScriptService",
+        "$path": "src/ServerScriptService"
+      }
+      ,
+       "StarterPlayer": {
+        "$className": "StarterPlayer",
+       "StarterCharacterScripts": {
+        "$className": "StarterCharacterScripts",
+        "$path": "src/StarterCharacterScripts"
+        },
+       "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "$path": "src/StarterPlayerScripts"
+        }
+      } ,
+      "StarterGui": {
+        "$className": "StarterGui",
+        "$ignoreUnknownInstances": true,
+        "$path": "src/StarterGui"
+      }
+    }
+ }
