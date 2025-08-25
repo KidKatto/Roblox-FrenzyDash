@@ -156,7 +156,7 @@ local function applyGamePassBonuses(player, originalPoints, isMagicKey)
 
 	-- Show bonus effects
 	if #effectsToShow > 0 then
-		spawn(function()
+		task.spawn(function()
 			local character = player.Character
 			if character and character:FindFirstChild("HumanoidRootPart") then
 				local billboardGui = Instance.new("BillboardGui")
@@ -183,7 +183,7 @@ local function applyGamePassBonuses(player, originalPoints, isMagicKey)
 				floatTween:Play()
 				fadeTween:Play()
 
-				wait(1.5)
+				task.wait(1.5)
 				if billboardGui and billboardGui.Parent then
 					billboardGui:Destroy()
 				end
@@ -224,7 +224,7 @@ end
 -- Function to handle character-based effects
 local function onCharacterAdded(player, character)
 	-- Wait a moment for character to fully load
-	wait(1)
+	task.wait(1)
 
 	-- Apply speed boost (considering both permanent and temporary)
 	applySpeedBoost(player)
@@ -233,9 +233,9 @@ local function onCharacterAdded(player, character)
 	applyVIPEffects(player)
 
 	-- Monitor for temporary boost changes
-	spawn(function()
+	task.spawn(function()
 		while character.Parent do
-			wait(5) -- Check every 5 seconds
+			task.wait(5) -- Check every 5 seconds
 			applySpeedBoost(player) -- This will handle the priority system
 		end
 	end)
@@ -281,7 +281,7 @@ Players.PlayerRemoving:Connect(function(player)
 		playerGamePasses[player] = nil
 	end
 	updateGameSettings() -- Update settings when players leave
-end)
+end) 
 
 -- Handle game pass purchases in real-time
 MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, gamePassId, wasPurchased)
@@ -384,17 +384,17 @@ Players.PlayerAdded:Connect(function(player)
 end)
 
 -- Update settings periodically in case of changes
-spawn(function()
+task.spawn(function()
 	while true do
-		wait(30) -- Check every 30 seconds
+		task.wait(30) -- Check every 30 seconds
 		updateGameSettings()
 	end
 end)
 
 -- Monitor temporary boosts and refresh speed accordingly
-spawn(function()
+task.spawn(function()
 	while true do
-		wait(10) -- Check every 10 seconds
+		task.wait(10) -- Check every 10 seconds
 		for player, _ in pairs(playerGamePasses) do
 			if player and player.Parent and player.Character then
 				applySpeedBoost(player) -- This handles the priority system

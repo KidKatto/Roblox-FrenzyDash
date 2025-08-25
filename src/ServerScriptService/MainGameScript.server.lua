@@ -1,8 +1,8 @@
 -- @ScriptType: Script
 -- Enhanced Main Coin Collector Game Script with Marketplace Integration
--- Place this script in ServerScriptService
+-- Place this script in ServerScriptService 
 -- Make sure CoinCollectorModule is placed in ReplicatedStorage or ServerStorage
---works
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,8 +11,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CoinCollectorModule = require(ReplicatedStorage:WaitForChild("CoinCollectorModule"))
 
 -- Add missing countdown constant
-CoinCollectorModule.COUNTDOWN_SEC = 3 -- 3 second countdown after instructions
--- Alternative if placed in ServerStorage: require(game.ServerStorage.CoinCollectorModule)
+CoinCollectorModule.COUNTDOWN_SEC = CoinCollectorModule.COUNTDOWN_SEC or 3 -- 3 second countdown after instructions
+CoinCollectorModule.INSTRUCTION_SEC = CoinCollectorModule.INSTRUCTION_SEC or 5 -- Default instruction time
 
 -- Wait for GamePass Handler to load (it sets up _G.GamePassHandler)
 local GamePassHandler = nil
@@ -225,78 +225,75 @@ local function startGame()
 	CoinCollectorModule.showGameStart()
 
 	-- Wait for instructions and countdown to finish (5 seconds instructions + countdown seconds + 1 second "GO!")
-	delay(CoinCollectorModule.COUNTDOWN_SEC + CoinCollectorModule.INSTRUCTION_SEC, function()
-		CoinCollectorModule.gameActive = true
-		CoinCollectorModule.gameTimeLeft = CoinCollectorModule.GAME_DURATION
+	task.wait(CoinCollectorModule.COUNTDOWN_SEC + CoinCollectorModule.INSTRUCTION_SEC + 1)
+	
+	CoinCollectorModule.gameActive = true
+	CoinCollectorModule.gameTimeLeft = CoinCollectorModule.GAME_DURATION
 
-		-- Reset current game scores only
-		for player, score in pairs(CoinCollectorModule.playerScores) do
-			if score and score.Parent then
-				score.Value = 0
-			end
+	-- Reset current game scores only
+	for player, score in pairs(CoinCollectorModule.playerScores) do
+		if score and score.Parent then
+			score.Value = 0
+		end
+	end
+
+	-- Clear existing coins
+	for i = #CoinCollectorModule.coins, 1, -1 do
+		local coin = CoinCollectorModule.coins[i]
+		if coin and coin.Parent then
+			coin:Destroy()
+		end
+		CoinCollectorModule.coins[i] = nil
+	end
+
+	print(`🎮 ${CoinCollectorModule.GAME_LABEL} COLLECTOR STARTED! Collect items for ` .. CoinCollectorModule.GAME_DURATION .. " seconds!")
+
+	-- Show game start notification to all players
+	if _G.SendNotificationToAllPlayers then
+		_G.SendNotificationToAllPlayers("ChatMessage", {
+			text = `🎮 ${CoinCollectorModule.GAME_LABEL} Collector game has started! Good luck!`,
+			color = Color3.fromRGB(0, 255, 100)
+		})
+	end
+
+	-- Game timer using RunService for better reliability
+	local lastTime = tick()
+	CoinCollectorModule.gameTimerConnection = RunService.Heartbeat:Connect(function()
+		if not CoinCollectorModule.gameActive then
+			return
 		end
 
-		-- Clear existing coins
-		for i = #CoinCollectorModule.coins, 1, -1 do
-			local coin = CoinCollectorModule.coins[i]
-			if coin and coin.Parent then
-				coin:Destroy()
-			end
-			CoinCollectorModule.coins[i] = nil
+		local currentTime = tick()
+		local deltaTime = currentTime - lastTime
+		lastTime = currentTime
+
+		CoinCollectorModule.gameTimeLeft = CoinCollectorModule.gameTimeLeft - deltaTime
+
+		if CoinCollectorModule.gameTimeLeft <= 0 then
+			endGame()
+		elseif math.floor(CoinCollectorModule.gameTimeLeft) % 30 == 0 and math.floor(CoinCollectorModule.gameTimeLeft) ~= CoinCollectorModule.GAME_DURATION then
+			print("⏰ " .. math.floor(CoinCollectorModule.gameTimeLeft) .. " seconds remaining!")
 		end
 
-		print(`🎮 ${CoinCollectorModule.GAME_LABEL} COLLECTOR STARTED! Collect items for ` .. CoinCollectorModule.GAME_DURATION .. " seconds!")
+		-- Show warning when less than 30 seconds remain
+		local timeLeft = math.floor(CoinCollectorModule.gameTimeLeft)
+		if timeLeft == 10 or timeLeft == 5 or timeLeft == 3 or timeLeft == 2 or timeLeft == 1 then
+			CoinCollectorModule.showTimeWarning(timeLeft)
+		end
+	end)
 
-		-- Show game start notification to all players
-		for _, player in pairs(Players:GetPlayers()) do
-			pcall(function()
-				local StarterGui = game:GetService("StarterGui")
-				StarterGui:SetCore("ChatMakeSystemMessage", {
-					Text = `🎮 ${CoinCollectorModule.GAME_LABEL} Collector game has started! Good luck!`;
-					Color = Color3.fromRGB(0, 255, 100);
-				})
-			end)
+	-- Coin spawner using proper interval tracking
+	local coinSpawnTimer = 0
+	CoinCollectorModule.coinSpawnerConnection = RunService.Heartbeat:Connect(function(deltaTime)
+		if not CoinCollectorModule.gameActive then
+			return
 		end
 
-		-- Game timer using RunService for better reliability
-		local lastTime = tick()
-		CoinCollectorModule.gameTimerConnection = RunService.Heartbeat:Connect(function()
-			if not CoinCollectorModule.gameActive then
-				return
-			end
-
-			local currentTime = tick()
-			local deltaTime = currentTime - lastTime
-			lastTime = currentTime
-
-			CoinCollectorModule.gameTimeLeft = CoinCollectorModule.gameTimeLeft - deltaTime
-
-			if CoinCollectorModule.gameTimeLeft <= 0 then
-				endGame()
-			elseif math.floor(CoinCollectorModule.gameTimeLeft) % 30 == 0 and math.floor(CoinCollectorModule.gameTimeLeft) ~= CoinCollectorModule.GAME_DURATION then
-				print("⏰ " .. math.floor(CoinCollectorModule.gameTimeLeft) .. " seconds remaining!")
-			end
-
-			-- Show warning when less than 30 seconds remain
-			local timeLeft = math.floor(CoinCollectorModule.gameTimeLeft)
-			if timeLeft == 10 or timeLeft == 5 or timeLeft == 3 or timeLeft == 2 or timeLeft == 1 then
-				CoinCollectorModule.showTimeWarning(timeLeft)
-			end
-		end)
-
-		-- Coin spawner
-		local lastSpawnTime = 0
-		CoinCollectorModule.coinSpawnerConnection = RunService.Heartbeat:Connect(function()
-			if not CoinCollectorModule.gameActive then
-				return
-			end
-
-			lastSpawnTime = lastSpawnTime + RunService.Heartbeat:Wait()
-			if lastSpawnTime >= CoinCollectorModule.COIN_SPAWN_RATE then
-				CoinCollectorModule.createGrabItem()
-				lastSpawnTime = 0
-			end
-		end)
+		coinSpawnTimer = coinSpawnTimer + deltaTime
+		if coinSpawnTimer >= CoinCollectorModule.COIN_SPAWN_RATE then
+			CoinCollectorModule.createGrabItem()
+			coinSpawnTimer = 0
+		end
 	end)
 end
 
@@ -388,49 +385,33 @@ function endGame()
 		CoinCollectorModule.showWinnerDisplay(winner.Name, highScore)
 
 		-- Show results to all players
-		for _, player in pairs(Players:GetPlayers()) do
-			pcall(function()
-				local StarterGui = game:GetService("StarterGui")
-				StarterGui:SetCore("ChatMakeSystemMessage", {
-					Text = "🏆 Winner: " .. winner.Name .. " with " .. highScore .. " points!";
-					Color = Color3.fromRGB(255, 215, 0);
-				})
-			end)
+		if _G.SendNotificationToAllPlayers then
+			_G.SendNotificationToAllPlayers("ChatMessage", {
+				text = "🏆 Winner: " .. winner.Name .. " with " .. highScore .. " points!",
+				color = Color3.fromRGB(255, 215, 0)
+			})
 		end
 	else
 		print("🎮 GAME OVER! No winner this round.")
 		CoinCollectorModule.showWinnerDisplay(nil, nil)
 	end
 
-	-- Wait before next game using simple delay
-	delay(10, function()
-		if not CoinCollectorModule.gameActive then
-			print("🚀 Starting next game...")
-			startGame()
-		end
-	end)
-end
-
--- Player management with enhanced marketplace integration
-Players.PlayerAdded:Connect(function(player)
-	CoinCollectorModule.createLeaderstats(player)
-
-	-- Welcome message with store info
-	delay(3, function()
-		pcall(function()
-			local StarterGui = game:GetService("StarterGui")
-			StarterGui:SetCore("ChatMakeSystemMessage", {
-				Text = `🎮 Welcome ${player.Name}! Check out the store (left side) for GamePasses and power-ups!`;
-				Color = Color3.fromRGB(0, 150, 255);
-			})
-		end)
-	end)
-end)
+	-- Wait before next game
+	task.wait(10)
+	if not CoinCollectorModule.gameActive then
+		print("🚀 Starting next game...")
+		startGame()
+	end
+end 
 
 -- Handle players already in the game
 for _, player in ipairs(Players:GetPlayers()) do
 	CoinCollectorModule.createLeaderstats(player)
 end
+
+Players.PlayerAdded:Connect(function(player)
+	CoinCollectorModule.createLeaderstats(player)
+end)
 
 Players.PlayerRemoving:Connect(function(player)
 	-- Save data before player leaves
@@ -562,8 +543,7 @@ print("🛒 GamePass integration active - waiting for GamePass Handler...")
 print("💰 Developer Products integration active - waiting for MarketplaceHandler...")
 print("⏰ Game will start in 5 seconds...")
 
--- Auto-start the game using delay function
-delay(5, function()
-	print("🚀 Starting first game...")
-	startGame()
-end)
+-- Auto-start the game
+task.wait(5)
+print("🚀 Starting first game...")
+startGame()
