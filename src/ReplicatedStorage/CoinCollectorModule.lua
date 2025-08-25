@@ -1,8 +1,7 @@
 -- @ScriptType: ModuleScript
 -- CoinCollectorModule - COMPLETE FIXED VERSION with setupGrabItem function
 -- Place this ModuleScript in ReplicatedStorage or ServerStorage
---finally it sync
-
+--work
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")

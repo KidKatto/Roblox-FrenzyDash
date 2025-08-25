@@ -1,12 +1,11 @@
 -- @ScriptType: Script
 -- Enhanced Main Coin Collector Game Script with Marketplace Integration
--- Place this script in ServerScriptService 
+-- Place this script in ServerScriptService
 -- Make sure CoinCollectorModule is placed in ReplicatedStorage or ServerStorage
-
+--works
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local test = game:GetService("ReplicatedStorage")
 
 -- Import the CoinCollectorModule (adjust path as needed)
 local CoinCollectorModule = require(ReplicatedStorage:WaitForChild("CoinCollectorModule"))
@@ -249,11 +248,14 @@ local function startGame()
 		print(`🎮 ${CoinCollectorModule.GAME_LABEL} COLLECTOR STARTED! Collect items for ` .. CoinCollectorModule.GAME_DURATION .. " seconds!")
 
 		-- Show game start notification to all players
-		if _G.SendNotificationToAllPlayers then
-			_G.SendNotificationToAllPlayers("ChatMessage", {
-				text = `🎮 ${CoinCollectorModule.GAME_LABEL} Collector game has started! Good luck!`,
-				color = Color3.fromRGB(0, 255, 100)
-			})
+		for _, player in pairs(Players:GetPlayers()) do
+			pcall(function()
+				local StarterGui = game:GetService("StarterGui")
+				StarterGui:SetCore("ChatMakeSystemMessage", {
+					Text = `🎮 ${CoinCollectorModule.GAME_LABEL} Collector game has started! Good luck!`;
+					Color = Color3.fromRGB(0, 255, 100);
+				})
+			end)
 		end
 
 		-- Game timer using RunService for better reliability
@@ -386,11 +388,14 @@ function endGame()
 		CoinCollectorModule.showWinnerDisplay(winner.Name, highScore)
 
 		-- Show results to all players
-		if _G.SendNotificationToAllPlayers then
-			_G.SendNotificationToAllPlayers("ChatMessage", {
-				text = "🏆 Winner: " .. winner.Name .. " with " .. highScore .. " points!",
-				color = Color3.fromRGB(255, 215, 0)
-			})
+		for _, player in pairs(Players:GetPlayers()) do
+			pcall(function()
+				local StarterGui = game:GetService("StarterGui")
+				StarterGui:SetCore("ChatMakeSystemMessage", {
+					Text = "🏆 Winner: " .. winner.Name .. " with " .. highScore .. " points!";
+					Color = Color3.fromRGB(255, 215, 0);
+				})
+			end)
 		end
 	else
 		print("🎮 GAME OVER! No winner this round.")
@@ -412,12 +417,13 @@ Players.PlayerAdded:Connect(function(player)
 
 	-- Welcome message with store info
 	delay(3, function()
-		if _G.SendNotificationToPlayer then
-			_G.SendNotificationToPlayer(player, "ChatMessage", {
-				text = `🎮 Welcome ${player.Name}! Check out the store (left side) for GamePasses and power-ups!`,
-				color = Color3.fromRGB(0, 150, 255)
+		pcall(function()
+			local StarterGui = game:GetService("StarterGui")
+			StarterGui:SetCore("ChatMakeSystemMessage", {
+				Text = `🎮 Welcome ${player.Name}! Check out the store (left side) for GamePasses and power-ups!`;
+				Color = Color3.fromRGB(0, 150, 255);
 			})
-		end
+		end)
 	end)
 end)
 

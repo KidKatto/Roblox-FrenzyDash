@@ -1,7 +1,7 @@
 -- @ScriptType: Script
 -- Enhanced GamePass Handler - Better integration with Developer Products
 -- Place this script in ServerScriptService
-
+-- works
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -298,11 +298,14 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, gameP
 		end
 
 		-- Show purchase confirmation message to all players
-		if _G.SendNotificationToAllPlayers then
-			_G.SendNotificationToAllPlayers("ChatMessage", {
-				text = "🎉 " .. player.Name .. " purchased a GamePass! Thank you for your support!",
-				color = Color3.fromRGB(0, 255, 100)
-			})
+		for _, p in pairs(Players:GetPlayers()) do
+			pcall(function()
+				local StarterGui = game:GetService("StarterGui")
+				StarterGui:SetCore("ChatMakeSystemMessage", {
+					Text = "🎉 " .. player.Name .. " purchased a GamePass! Thank you for your support!";
+					Color = Color3.fromRGB(0, 255, 100);
+				})
+			end)
 		end
 	end
 end)

@@ -1,8 +1,7 @@
 -- @ScriptType: LocalScript
--- IMPROVED Store Menu GUI - Better MarketplaceHandler Integration
+-- Enhanced Store Menu GUI - Handles both GamePasses and Developer Products
 -- Place this LocalScript in StarterGui
--- sync?
-
+--works
 local Players = game:GetService("Players")
 local MarketplaceService = game:GetService("MarketplaceService")
 local TweenService = game:GetService("TweenService")
@@ -66,8 +65,8 @@ local DEVELOPER_PRODUCTS = {
 	},
 	{
 		id = 3378077493,
-		name = "Speedy Boots",
-		description = "Get 2x speed for 10 minutes! 🚀",
+		name = "Speed Boost (10 secs)",
+		description = "Get 2x speed for 10 secs! 🚀",
 		price = 20,
 		icon = "🚀",
 		color = Color3.fromRGB(255, 69, 0),
@@ -84,69 +83,15 @@ for _, item in ipairs(DEVELOPER_PRODUCTS) do
 	table.insert(ALL_STORE_ITEMS, item)
 end
 
--- MarketplaceHandler connection with better error handling
+-- Wait for MarketplaceHandler to be available
 local MarketplaceHandler = nil
-local handlerConnectionAttempts = 0
-local maxConnectionAttempts = 60 -- 30 seconds at 0.5 second intervals
-
--- Improved MarketplaceHandler connection
-local function connectToMarketplaceHandler()
-	spawn(function()
-		print("🔄 Attempting to connect to MarketplaceHandler...")
-
-		while not MarketplaceHandler and handlerConnectionAttempts < maxConnectionAttempts do
-			wait(0.5)
-			handlerConnectionAttempts = handlerConnectionAttempts + 1
-
-			if _G.MarketplaceHandler then
-				if _G.MarketplaceHandler.isReady and _G.MarketplaceHandler.isReady() then
-					MarketplaceHandler = _G.MarketplaceHandler
-					print("✅ Store GUI successfully connected to MarketplaceHandler!")
-					break
-				else
-					print("⚠️ MarketplaceHandler exists but not ready yet...")
-				end
-			end
-		end
-
-		if not MarketplaceHandler then
-			warn("❌ Failed to connect to MarketplaceHandler after " .. maxConnectionAttempts .. " attempts")
-			warn("❌ Make sure MarketplaceScript is running in ServerScriptService!")
-		end
-	end)
-end
-
--- Start connection attempt
-connectToMarketplaceHandler()
-
--- Safe SetCore function with comprehensive error handling
-local function safeSetCore(coreType, data)
-	spawn(function()
-		local success, errorMsg = pcall(function()
-			StarterGui:SetCore(coreType, data)
-		end)
-
-		if not success then
-			warn("SetCore failed for " .. coreType .. ": " .. tostring(errorMsg))
-			-- Fallback: use print for important messages
-			if coreType == "ChatMakeSystemMessage" then
-				print("[STORE MESSAGE] " .. (data.Text or tostring(data)))
-			end
-		end
-	end)
-end
-
--- Function to check MarketplaceHandler status
-local function checkHandlerStatus()
-	if not MarketplaceHandler then
-		safeSetCore("ChatMakeSystemMessage", {
-			Text = "⚠️ Store Error: MarketplaceHandler not connected. Please wait or rejoin.";
-			Color = Color3.fromRGB(255, 100, 100);
-		})
-		return false
+spawn(function()
+	while not _G.MarketplaceHandler do
+		wait(0.1)
 	end
-	return true
-end
+	MarketplaceHandler = _G.MarketplaceHandler
+	print("🛒 Store GUI connected to MarketplaceHandler!")
+end)
 
 -- Create the main store GUI
 local function createStoreGUI()
@@ -179,28 +124,6 @@ local function createStoreGUI()
 	local storeButtonCorner = Instance.new("UICorner")
 	storeButtonCorner.CornerRadius = UDim.new(0, 12)
 	storeButtonCorner.Parent = storeButton
-
-	-- Status indicator on store button
-	local statusIndicator = Instance.new("Frame")
-	statusIndicator.Name = "StatusIndicator"
-	statusIndicator.Size = UDim2.new(0, 12, 0, 12)
-	statusIndicator.Position = UDim2.new(1, -15, 0, 3)
-	statusIndicator.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Red by default
-	statusIndicator.BorderSizePixel = 0
-	statusIndicator.Parent = storeButton
-
-	local statusCorner = Instance.new("UICorner")
-	statusCorner.CornerRadius = UDim.new(0, 6)
-	statusCorner.Parent = statusIndicator
-
-	-- Function to update status indicator
-	local function updateStatusIndicator()
-		if MarketplaceHandler then
-			statusIndicator.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Green = connected
-		else
-			statusIndicator.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Red = disconnected
-		end
-	end
 
 	-- Store Panel (Initially hidden)
 	local storePanel = Instance.new("Frame")
@@ -263,47 +186,11 @@ local function createStoreGUI()
 	closeButtonCorner.CornerRadius = UDim.new(0, 10)
 	closeButtonCorner.Parent = closeButton
 
-	-- Connection Status Panel
-	local statusPanel = Instance.new("Frame")
-	statusPanel.Name = "StatusPanel"
-	statusPanel.Size = UDim2.new(1, -20, 0, 30)
-	statusPanel.Position = UDim2.new(0, 10, 0, 85)
-	statusPanel.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-	statusPanel.BorderSizePixel = 0
-	statusPanel.Parent = storePanel
-
-	local statusPanelCorner = Instance.new("UICorner")
-	statusPanelCorner.CornerRadius = UDim.new(0, 5)
-	statusPanelCorner.Parent = statusPanel
-
-	local statusLabel = Instance.new("TextLabel")
-	statusLabel.Name = "StatusLabel"
-	statusLabel.Size = UDim2.new(1, -10, 1, 0)
-	statusLabel.Position = UDim2.new(0, 5, 0, 0)
-	statusLabel.BackgroundTransparency = 1
-	statusLabel.Text = "🔄 Connecting to MarketplaceHandler..."
-	statusLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
-	statusLabel.TextScaled = true
-	statusLabel.Font = Enum.Font.SourceSans
-	statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-	statusLabel.Parent = statusPanel
-
-	-- Function to update status label
-	local function updateStatusLabel()
-		if MarketplaceHandler then
-			statusLabel.Text = "✅ Store Ready - All features available!"
-			statusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
-		else
-			statusLabel.Text = "⚠️ MarketplaceHandler disconnected - Some features may not work"
-			statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-		end
-	end
-
 	-- Category Tabs Frame
 	local tabFrame = Instance.new("Frame")
 	tabFrame.Name = "TabFrame"
 	tabFrame.Size = UDim2.new(1, 0, 0, 50)
-	tabFrame.Position = UDim2.new(0, 0, 0, 125)
+	tabFrame.Position = UDim2.new(0, 0, 0, 80)
 	tabFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 	tabFrame.BorderSizePixel = 0
 	tabFrame.Parent = storePanel
@@ -362,8 +249,8 @@ local function createStoreGUI()
 	-- Scroll Frame for items
 	local scrollFrame = Instance.new("ScrollingFrame")
 	scrollFrame.Name = "ItemScroll"
-	scrollFrame.Size = UDim2.new(1, -20, 1, -195)
-	scrollFrame.Position = UDim2.new(0, 10, 0, 185)
+	scrollFrame.Size = UDim2.new(1, -20, 1, -150)
+	scrollFrame.Position = UDim2.new(0, 10, 0, 140)
 	scrollFrame.BackgroundTransparency = 1
 	scrollFrame.BorderSizePixel = 0
 	scrollFrame.ScrollBarThickness = 8
@@ -385,7 +272,7 @@ local function createStoreGUI()
 	local function toggleStore()
 		storeOpen = not storeOpen
 
-		local targetSize = storeOpen and UDim2.new(0, 420, 0.85, 0) or UDim2.new(0, 0, 0.85, 0)
+		local targetSize = storeOpen and UDim2.new(0, 400, 0.85, 0) or UDim2.new(0, 0, 0.85, 0)
 		local targetTransparency = storeOpen and 0.1 or 1
 
 		local tween = TweenService:Create(
@@ -447,35 +334,32 @@ local function createStoreGUI()
 		return success and hasPass
 	end
 
-	-- IMPROVED: Function to prompt game pass purchase with better error handling
+	-- Function to prompt game pass purchase
 	local function promptGamePassPurchase(gamePassId)
-		print("🎫 Attempting GamePass purchase for ID:", gamePassId)
-
-		local success, errorMsg = pcall(function()
+		local success, error = pcall(function()
 			MarketplaceService:PromptGamePassPurchase(player, gamePassId)
 		end)
 
 		if not success then
-			warn("❌ Failed to prompt GamePass purchase: " .. tostring(errorMsg))
-			safeSetCore("ChatMakeSystemMessage", {
+			warn("Failed to prompt GamePass purchase: " .. tostring(error))
+			StarterGui:SetCore("ChatMakeSystemMessage", {
 				Text = "⚠️ Store Error: Could not open GamePass purchase prompt. Please try again.";
 				Color = Color3.fromRGB(255, 100, 100);
 			})
-		else
-			print("✅ Successfully prompted GamePass purchase for ID:", gamePassId)
 		end
 	end
 
-	-- IMPROVED: Function to prompt developer product purchase with better error handling
+	-- Function to prompt developer product purchase
 	local function promptProductPurchase(productId)
-		print("🛍️ Attempting Developer Product purchase for ID:", productId)
-
-		if not checkHandlerStatus() then
-			return
+		if MarketplaceHandler and MarketplaceHandler.promptPurchase then
+			MarketplaceHandler.promptPurchase(player, productId)
+		else
+			warn("MarketplaceHandler not available for product purchase")
+			StarterGui:SetCore("ChatMakeSystemMessage", {
+				Text = "⚠️ Store Error: MarketplaceHandler not ready. Please try again.";
+				Color = Color3.fromRGB(255, 100, 100);
+			})
 		end
-
-		-- Use the MarketplaceHandler's improved promptPurchase function
-		MarketplaceHandler.promptPurchase(player, productId)
 	end
 
 	-- Function to create a store item
@@ -598,16 +482,9 @@ local function createStoreGUI()
 					promptGamePassPurchase(itemData.id)
 				end)
 			else
-				-- Developer Product - check if handler is available
-				if MarketplaceHandler then
-					purchaseButton.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
-					purchaseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-					purchaseButton.Text = "R$ " .. itemData.price
-				else
-					purchaseButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-					purchaseButton.TextColor3 = Color3.fromRGB(150, 150, 150)
-					purchaseButton.Text = "UNAVAILABLE"
-				end
+				purchaseButton.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+				purchaseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+				purchaseButton.Text = "R$ " .. itemData.price
 
 				-- Developer Product purchase functionality
 				purchaseButton.MouseButton1Click:Connect(function()
@@ -615,31 +492,26 @@ local function createStoreGUI()
 				end)
 			end
 
-			-- Hover effects for purchasable items (only if active)
-			if MarketplaceHandler or isGamePass then
-				purchaseButton.MouseEnter:Connect(function()
-					local hoverColor = isGamePass and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 180, 0)
-					local hoverTween = TweenService:Create(
-						purchaseButton,
-						TweenInfo.new(0.2, Enum.EasingStyle.Quad),
-						{BackgroundColor3 = hoverColor}
-					)
-					hoverTween:Play()
-				end)
+			-- Hover effects for purchasable items
+			purchaseButton.MouseEnter:Connect(function()
+				local hoverColor = isGamePass and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 180, 0)
+				local hoverTween = TweenService:Create(
+					purchaseButton,
+					TweenInfo.new(0.2, Enum.EasingStyle.Quad),
+					{BackgroundColor3 = hoverColor}
+				)
+				hoverTween:Play()
+			end)
 
-				purchaseButton.MouseLeave:Connect(function()
-					local normalColor = isGamePass and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(255, 140, 0)
-					if not MarketplaceHandler and not isGamePass then
-						normalColor = Color3.fromRGB(100, 100, 100)
-					end
-					local unhoverTween = TweenService:Create(
-						purchaseButton,
-						TweenInfo.new(0.2, Enum.EasingStyle.Quad),
-						{BackgroundColor3 = normalColor}
-					)
-					unhoverTween:Play()
-				end)
-			end
+			purchaseButton.MouseLeave:Connect(function()
+				local normalColor = isGamePass and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(255, 140, 0)
+				local unhoverTween = TweenService:Create(
+					purchaseButton,
+					TweenInfo.new(0.2, Enum.EasingStyle.Quad),
+					{BackgroundColor3 = normalColor}
+				)
+				unhoverTween:Play()
+			end)
 		end
 
 		-- Owned indicator overlay
@@ -706,13 +578,8 @@ local function createStoreGUI()
 	end)
 
 	-- Connect main buttons
-	storeButton.MouseButton1Click:Connect(function()
-		toggleStore()
-	end)
-
-	closeButton.MouseButton1Click:Connect(function()
-		toggleStore()
-	end)
+	storeButton.MouseButton1Click:Connect(toggleStore)
+	closeButton.MouseButton1Click:Connect(toggleStore)
 
 	-- Store button hover effects
 	storeButton.MouseEnter:Connect(function()
@@ -740,51 +607,15 @@ local function createStoreGUI()
 		end
 	end)
 
-	-- Function to refresh store display
-	local function refreshStore()
-		updateStatusIndicator()
-		updateStatusLabel()
-		populateItems()
-	end
-
 	-- Initialize store with all items
 	updateTabAppearance("all")
 	populateItems()
-	updateStatusIndicator()
-	updateStatusLabel()
-
-	-- Monitor MarketplaceHandler connection status
-	spawn(function()
-		while true do
-			wait(2) -- Check every 2 seconds
-			local previousStatus = MarketplaceHandler ~= nil
-
-			-- Check if handler became available
-			if not MarketplaceHandler and _G.MarketplaceHandler then
-				if _G.MarketplaceHandler.isReady and _G.MarketplaceHandler.isReady() then
-					MarketplaceHandler = _G.MarketplaceHandler
-					print("✅ MarketplaceHandler connection restored!")
-					refreshStore()
-				end
-			end
-
-			-- Update indicators if status changed
-			if (MarketplaceHandler ~= nil) ~= previousStatus then
-				updateStatusIndicator()
-				updateStatusLabel()
-				-- Refresh product buttons if handler status changed
-				if currentTab == "all" or currentTab == "products" then
-					populateItems()
-				end
-			end
-		end
-	end)
 
 	-- Refresh store when game passes are purchased
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(plr, gamePassId, wasPurchased)
 		if plr == player and wasPurchased then
 			-- Show purchase success message
-			safeSetCore("ChatMakeSystemMessage", {
+			StarterGui:SetCore("ChatMakeSystemMessage", {
 				Text = "🎉 GamePass purchase successful! Thank you for your support!";
 				Color = Color3.fromRGB(0, 255, 100);
 			})
@@ -795,9 +626,12 @@ local function createStoreGUI()
 		end
 	end)
 
-	print("🛒 Improved Store GUI created successfully!")
+	-- Refresh store when developer products are purchased
+	-- Note: Developer products don't have a direct "purchased" event since they're consumable
+	-- The MarketplaceScript handles the ProcessReceipt callback
+
+	print("🛒 Enhanced Store GUI created successfully!")
 	print("📦 " .. #GAME_PASSES .. " Game Passes and " .. #DEVELOPER_PRODUCTS .. " Developer Products loaded")
-	print("🔄 MarketplaceHandler connection status: " .. (MarketplaceHandler and "Connected" or "Disconnected"))
 end
 
 -- Initialize the store GUI
@@ -809,9 +643,12 @@ player.CharacterAdded:Connect(function()
 	createStoreGUI()
 end)
 
-print("🛒 IMPROVED Store Menu GUI Script loaded successfully!")
-print("🎯 Configured " .. #GAME_PASSES .. " GamePasses and " .. #DEVELOPER_PRODUCTS .. " Developer Products")
-print("⚠️ Make sure MarketplaceScript is running in ServerScriptService!")
-print("🔧 Connection attempts: " .. handlerConnectionAttempts .. "/" .. maxConnectionAttempts)
-print("✅ Improved error handling and connection monitoring active!")
-print("🆘 Check the status indicator on the store button for connection status!")
+-- Periodic refresh to update temporary boost status (every 30 seconds)
+spawn(function()
+	while true do
+		wait(30)
+		if _G.PlayerTempBoosts then
+			-- Could add visual indicators for temporary boosts here if needed
+		end
+	end
+end)
